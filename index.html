@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Library Monitoring System</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .main-container {
+      background-color: #ffffff;
+      padding: 30px 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      max-width: 450px;
+      width: 100%;
+    }
+    .logo {
+      display: block;
+      margin: 0 auto 10px auto;
+      max-width: 100px;
+    }
+    h1 {
+      text-align: center;
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+    label {
+      font-weight: bold;
+      margin-top: 10px;
+      display: block;
+    }
+    .id-container {
+      display: flex;
+      align-items: center;
+    }
+    .id-container span {
+      background-color: #eee;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px 0 0 5px;
+    }
+    .id-container input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-left: none;
+      border-radius: 0 5px 5px 0;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    .button-group {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .button-group button {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      background-color: #007bff;
+      color: white;
+      font-weight: bold;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .button-group button:hover {
+      background-color: #0056b3;
+    }
+    .admin-link {
+      text-align: center;
+      margin-top: 15px;
+    }
+    .admin-link a {
+      color: #007bff;
+      text-decoration: none;
+    }
+    .admin-panel {
+      display: none;
+      margin-top: 30px;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      max-width: 900px;
+      width: 100%;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #eaeaea;
+    }
+    .remove-btn {
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="main-container" id="main">
+    <img src="https://i.imgur.com/kaVX8OQ.png" alt="TCC Logo" class="logo">
+    <h1>LIBRARY MONITORING SYSTEM</h1>
+
+    <label for="idSuffix">TCC ID NUMBER</label>
+    <div class="id-container">
+      <span>TCC-</span>
+      <input type="text" id="idSuffix" placeholder="2024-0001" maxlength="9" oninput="formatIDNumber()">
+    </div>
+
+    <label for="name">FULL NAME</label>
+    <input type="text" id="name" placeholder="Juan Dela Cruz">
+
+    <label for="program">PROGRAM, YEAR & SECTION</label>
+    <input type="text" id="program" placeholder="e.g. BSIT 2A">
+
+    <label for="purpose">PURPOSE</label>
+    <input type="text" id="purpose" placeholder="Study, Research, etc.">
+
+    <div class="button-group">
+      <button onclick="submitData('Time In')">TIME IN</button>
+      <button onclick="submitData('Time Out')">TIME OUT</button>
+    </div>
+
+    <div class="admin-link">
+      <a href="#" onclick="showAdminPanel()">ADMIN LOGIN</a>
+    </div>
+  </div>
+
+  <div class="admin-panel" id="admin-panel">
+    <h2>Log Records</h2>
+    <button onclick="exportCSV()">Export CSV</button>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>ID Number</th>
+          <th>Name</th>
+          <th>Program</th>
+          <th>Purpose</th>
+          <th>Time In</th>
+          <th>Time Out</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="log-body"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const password = "TCClibrary 24";
+
+    function capitalizeWords(str) {
+      return str.replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    function formatIDNumber() {
+      const input = document.getElementById("idSuffix");
+      input.value = input.value.replace(/[^0-9-]/g, "");
+    }
+
+    function submitData(status) {
+      const rawID = document.getElementById("idSuffix").value.trim();
+      const fullID = `TCC-${rawID}`;
+      const idPattern = /^TCC-\d{4}-\d{4}$/;
+      const name = document.getElementById("name").value.trim();
+      const program = document.getElementById("program").value.trim();
+      const purpose = document.getElementById("purpose").value.trim();
+      const now = new Date();
+      const date = now.toLocaleDateString();
+      const time = now.toLocaleTimeString();
+
+      if (!idPattern.test(fullID) || !name || !program || !purpose) {
+        alert("Please fill in all fields correctly.\nID must follow: TCC-XXXX-XXXX");
+        return;
+      }
+
+      let logs = JSON.parse(localStorage.getItem("logs") || "[]");
+      const existing = logs.find(log => log.date === date && log.idNumber === fullID);
+
+      if (status === "Time In") {
+        if (existing && existing.timeIn) {
+          alert("You already timed in today.");
+          return;
+        } else if (existing) {
+          existing.timeIn = time;
+        } else {
+          logs.push({ date, idNumber: fullID, name, program, purpose, timeIn: time, timeOut: "" });
+        }
+      }
+
+      if (status === "Time Out") {
+        if (!existing) {
+          alert("No Time In found for today. Please Time In first.");
+          return;
+        } else if (existing.timeOut) {
+          alert("You already timed out today.");
+          return;
+        } else {
+          existing.timeOut = time;
+        }
+      }
+
+      localStorage.setItem("logs", JSON.stringify(logs));
+      alert(`${status} recorded for ${name}`);
+
+      document.getElementById("idSuffix").value = "";
+      document.getElementById("name").value = "";
+      document.getElementById("program").value = "";
+      document.getElementById("purpose").value = "";
+    }
+
+    function showAdminPanel() {
+      const input = prompt("Enter admin password:");
+      if (input === password) {
+        document.getElementById("main").style.display = "none";
+        document.getElementById("admin-panel").style.display = "block";
+        loadLogs();
+      } else {
+        alert("Incorrect password.");
+      }
+    }
+
+    function loadLogs() {
+      const logs = JSON.parse(localStorage.getItem("logs") || "[]");
+      const tbody = document.getElementById("log-body");
+      tbody.innerHTML = "";
+
+      logs.forEach((log, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${log.date}</td>
+          <td>${log.idNumber}</td>
+          <td>${capitalizeWords(log.name)}</td>
+          <td>${log.program}</td>
+          <td>${log.purpose}</td>
+          <td>${log.timeIn || "-"}</td>
+          <td>${log.timeOut || "-"}</td>
+          <td><button class="remove-btn" onclick="removeLog(${index})">Remove</button></td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function removeLog(index) {
+      let logs = JSON.parse(localStorage.getItem("logs") || "[]");
+      logs.splice(index, 1);
+      localStorage.setItem("logs", JSON.stringify(logs));
+      loadLogs();
+    }
+
+    function exportCSV() {
+      const logs = JSON.parse(localStorage.getItem("logs") || "[]");
+      let csv = "Date,ID Number,Name,Program,Purpose,Time In,Time Out\n";
+      logs.forEach(log => {
+        csv += `${log.date},"${log.idNumber}","${capitalizeWords(log.name)}","${log.program}","${log.purpose}",${log.timeIn || ""},${log.timeOut || ""}\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "library_logs.csv";
+      a.click();
+    }
+  </script>
+</body>
+</html>
